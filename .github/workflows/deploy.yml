@@ -1,0 +1,44 @@
+name: Couchbase Keepalive
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # 每30天运行一次(UTC时间0点)
+    - cron: '0 5 * * *'  # 每30天运行一次(UTC时间0点)
+    - cron: '0 10 * * *'  # 每30天运行一次(UTC时间0点)
+    - cron: '0 15 * * *'  # 每30天运行一次(UTC时间0点)
+    - cron: '0 20 * * *'  # 每30天运行一次(UTC时间0点)
+
+
+
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run keepalive script
+        env:
+          COUCHBASE_CLUSTER_CONFIGS: ${{ secrets.COUCHBASE_CLUSTER_CONFIGS }}
+          COUCHBASE_PASSWORD_DEV: ${{ secrets.COUCHBASE_PASSWORD_DEV }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node index.js
