@@ -2,18 +2,14 @@ name: Couchbase Keepalive
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # 每30天运行一次(UTC时间0点)
-    - cron: '0 5 * * *'  # 每30天运行一次(UTC时间0点)
-    - cron: '0 10 * * *'  # 每30天运行一次(UTC时间0点)
-    - cron: '0 15 * * *'  # 每30天运行一次(UTC时间0点)
-    - cron: '0 20 * * *'  # 每30天运行一次(UTC时间0点)
-
-
+   - cron: '0 0,6,12,18 * * *'
 
 
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # 必须！允许 action 推送 commit
 
     steps:
       - name: Checkout repository
@@ -48,3 +44,21 @@ jobs:
       #   with:
       #     name: package-lock
       #     path: package-lock.json
+# ─────────────── 自动 commit 当前日期保活 ───────────────
+      - name: Create keep-alive commit
+        run: |
+          echo "# Keep-alive commit" >> keepalive.md 2>/dev/null || true
+          echo "" >> keepalive.md
+          echo "Last keep-alive: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> keepalive.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keepalive.md || true
+
+      - name: Commit & Push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: keep-alive commit - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          file_pattern: keepalive.md
+          skip_dirty_check: false
+          skip_fetch: false
+          branch: ${{ github.head_ref || github.ref_name }}
